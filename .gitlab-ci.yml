@@ -4,27 +4,27 @@ stages:
   - lint
   - security
 
-# ---------- GitLab SAST Security Scanning ----------
 include:
   - template: Security/SAST.gitlab-ci.yml
 
-# ---------- Variables ----------
 variables:
   VERSION_FILE: "app/__version__.py"
 
-# ---------- Bump Version ----------
+# ---------- Bump Version (Fixed to Run Only Once) ----------
 bump_version:
   stage: bump
   image: python:3.13
   rules:
-    # - if: $CI_COMMIT_MESSAGE !~ /Bump version/ && $CI_PIPELINE_SOURCE == "push"
-    - if: $CI_COMMIT_MESSAGE !~ /Bump version/ && $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"
+    # Only run on direct pushes to main, NOT by the CI user
+    - if: $CI_COMMIT_MESSAGE !~ /Bump version/ &&
+        $CI_PIPELINE_SOURCE == "push" &&
+        $CI_COMMIT_BRANCH == "main" &&
+        $GITLAB_USER_LOGIN != "ci-bump-token" # Skip CI-triggered pipelines
   script:
     - pip install bump2version
     - git config --global user.name "GitLab CI Bump"
     - git config --global user.email "ci-bump@gitlab.com"
     - git remote set-url origin "https://ci-bump-token:${GITLAB_TOKEN}@gitlab.com/tahaomar001/fastapi-skilton.git"
-    # - git remote set-url origin "https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/tahaomar001/fastapi-skilton.git"
     - >
       COMMIT_MSG="$(git log -1 --pretty=%B)" &&
       if echo "$COMMIT_MSG" | grep -q "#major"; then
@@ -37,14 +37,13 @@ bump_version:
     - git push origin HEAD:main
     - git push origin --tags
 
-# ---------- Linting ----------
+# ---------- Linting & Security (Run Once per Commit) ----------
 lint_python:
   stage: lint
   image: python:3.13
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # Runs in MRs
-    # - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
-    - if: $CI_COMMIT_BRANCH == "main" && $CI_OPEN_MERGE_REQUESTS == ""
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
   before_script:
     - pip install --upgrade pip
     - pip install bandit black codespell flake8 flake8-2020 flake8-bugbear flake8-comprehensions isort mypy pyupgrade
@@ -62,20 +61,17 @@ lint_python:
     - echo "Running codespell..."
     - codespell .
 
-# ---------- Custom Security Checks ----------
 custom_security_checks:
   stage: security
   image: python:3.13
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # Runs in MRs
-    # - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
-    - if: $CI_COMMIT_BRANCH == "main" && $CI_OPEN_MERGE_REQUESTS == ""
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
   before_script:
     - pip install --upgrade pip
     - pip install bandit safety
   script:
     - echo "Running bandit..."
     - bandit --recursive --skip B101,B105 .
-    # - pip install -r requirements.txt || pip install --editable . || pip install .
     - pip install --use-feature=fast-deps -r requirements.txt
     - safety check
