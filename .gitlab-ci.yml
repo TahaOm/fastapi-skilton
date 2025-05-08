@@ -17,9 +17,10 @@ bump_version:
   stage: bump
   image: python:3.13
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
-      when: manual # Optional: Require manual click to run
-      allow_failure: false
+    # - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
+    - if: $CI_COMMIT_MESSAGE !~ /Bump version/ && $CI_PIPELINE_SOURCE == "push"
+      # when: manual # Optional: Require manual click to run
+      # allow_failure: false
   script:
     - pip install bump2version
     - git config --global user.name "GitLab CI Bump"
