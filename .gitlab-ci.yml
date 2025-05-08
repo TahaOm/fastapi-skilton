@@ -19,7 +19,6 @@ bump_version:
   rules:
     # - if: $CI_COMMIT_MESSAGE !~ /Bump version/ && $CI_PIPELINE_SOURCE == "push"
     - if: $CI_COMMIT_MESSAGE !~ /Bump version/ && $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"
-      when: manual # Makes it require manual trigger after push
   script:
     - pip install bump2version
     - git config --global user.name "GitLab CI Bump"
