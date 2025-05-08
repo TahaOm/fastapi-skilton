@@ -1,0 +1,29 @@
+[project]
+name = "fastapi-skilton"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "tahaOr",email = "tahaomar001@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi[standard] (>=0.115.12,<0.116.0)",
+    "uvicorn[standard] (>=0.34.2,<0.35.0)",
+    "sqlalchemy (>=2.0.40,<3.0.0)",
+    "alembic (>=1.15.2,<2.0.0)",
+    "sentry-sdk (>=2.27.0,<3.0.0)",
+    "python-jose[cryptography] (>=3.4.0,<4.0.0)",
+    "pydantic (>=2.11.4,<3.0.0)"
+]
+
+[tool.poetry]
+packages = [{include = "fastapi_skilton", from = "src"}]
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.5"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

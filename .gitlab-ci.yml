@@ -76,5 +76,6 @@ custom_security_checks:
   script:
     - echo "Running bandit..."
     - bandit --recursive --skip B101,B105 .
-    - pip install -r requirements.txt || pip install --editable . || pip install .
+    # - pip install -r requirements.txt || pip install --editable . || pip install .
+    - pip install --use-feature=fast-deps -r requirements.txt
     - safety check
