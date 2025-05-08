@@ -18,26 +18,28 @@ bump_version:
   image: python:3.13
   rules:
     - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
+      when: manual # Optional: Require manual click to run
+      allow_failure: false
   script:
     - pip install bump2version
-    - git config user.name "GitLab CI"
-    - git config user.email "ci@gitlab.com"
-    - git remote set-url origin "https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/tahaomar001/fastapi-skilton.git"
+    - git config --global user.name "GitLab CI Bump"
+    - git config --global user.email "ci-bump@gitlab.com"
+    - git remote set-url origin "https://ci-bump-token:${GITLAB_TOKEN}@gitlab.com/tahaomar001/fastapi-skilton.git"
+    # - git remote set-url origin "https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/tahaomar001/fastapi-skilton.git"
     - >
       COMMIT_MSG="$(git log -1 --pretty=%B)" &&
-      echo "Commit: $COMMIT_MSG" &&
       if echo "$COMMIT_MSG" | grep -q "#major"; then
-        bump2version --allow-dirty --verbose major $VERSION_FILE;
+        bump2version major $VERSION_FILE;
       elif echo "$COMMIT_MSG" | grep -q "#minor"; then
-        bump2version --allow-dirty --verbose minor $VERSION_FILE;
+        bump2version minor $VERSION_FILE;
       else
-        bump2version --allow-dirty --verbose patch $VERSION_FILE;
+        bump2version patch $VERSION_FILE;
       fi
     - git push origin HEAD:main
     - git push origin --tags
 
 # ---------- Linting ----------
-lint:
+lint_python:
   stage: lint
   image: python:3.13
   rules:
@@ -64,6 +66,7 @@ lint:
 custom_security_checks:
   stage: security
   image: python:3.13
+  needs: [] # Run independently
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -73,6 +76,5 @@ custom_security_checks:
   script:
     - echo "Running bandit..."
     - bandit --recursive --skip B101,B105 .
-    - echo "Running safety..."
     - pip install -r requirements.txt || pip install --editable . || pip install .
     - safety check
