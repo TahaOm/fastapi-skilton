@@ -31,24 +31,16 @@ bump_version:
     - pip install bump2version
     - git config user.name "GitLab CI"
     - git config user.email "ci@gitlab.com"
-
-    # Get last commit message
-    - COMMIT_MSG=$(git log -1 --pretty=%B)
-    - echo "Commit: $COMMIT_MSG"
-
-    # Decide bump type
-    - |
+    - >
+      COMMIT_MSG="$(git log -1 --pretty=%B)" &&
+      echo "Commit: $COMMIT_MSG" &&
       if echo "$COMMIT_MSG" | grep -q "#major"; then
-        BUMP="major"
+        bump2version --allow-dirty --verbose major $VERSION_FILE;
       elif echo "$COMMIT_MSG" | grep -q "#minor"; then
-        BUMP="minor"
+        bump2version --allow-dirty --verbose minor $VERSION_FILE;
       else
-        BUMP="patch"
+        bump2version --allow-dirty --verbose patch $VERSION_FILE;
       fi
-
-    - bump2version --allow-dirty --verbose $BUMP $VERSION_FILE
-
-    # Push version changes and tag
     - git push origin main
     - git push origin --tags
 
