@@ -16,6 +16,8 @@ variables:
 bump_version:
   stage: bump
   image: python:3.13
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
   only:
     refs:
       - main
@@ -41,6 +43,9 @@ bump_version:
 lint:
   stage: lint
   image: python:3.13
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
   before_script:
     - pip install --upgrade pip
     - pip install bandit black codespell flake8 flake8-2020 flake8-bugbear flake8-comprehensions isort mypy pyupgrade
