@@ -6,8 +6,83 @@
 # Note that environment variables can be set in several places
 # See https://docs.gitlab.com/ee/ci/variables/#cicd-variable-precedence
 stages:
-- test
+  - test
+  - bump
+  - lint
+  - security
+
+# ---------- Test ----------
 sast:
   stage: test
 include:
-- template: Security/SAST.gitlab-ci.yml
+  - template: Security/SAST.gitlab-ci.yml
+
+# ---------- Bump ----------
+variables:
+  VERSION_FILE: "app/__version__.py"
+
+bump_version:
+  stage: bump
+  image: python:3.11
+  only:
+    refs:
+      - main
+  script:
+    - pip install bump2version
+    - git config user.name "GitLab CI"
+    - git config user.email "ci@gitlab.com"
+
+    # Get last commit message
+    - COMMIT_MSG=$(git log -1 --pretty=%B)
+    - echo "Commit: $COMMIT_MSG"
+
+    # Decide bump type
+    - |
+      if echo "$COMMIT_MSG" | grep -q "#major"; then
+        BUMP="major"
+      elif echo "$COMMIT_MSG" | grep -q "#minor"; then
+        BUMP="minor"
+      else
+        BUMP="patch"
+      fi
+
+    - bump2version --allow-dirty --verbose $BUMP $VERSION_FILE
+
+    # Push version changes and tag
+    - git push origin main
+    - git push origin --tags
+
+# ---------- Linting ----------
+lint:
+  stage: lint
+  image: python:3.13
+  before_script:
+    - pip install --upgrade pip
+    - pip install bandit black codespell flake8 flake8-2020 flake8-bugbear flake8-comprehensions isort mypy pyupgrade
+  script:
+    - echo "Running flake8..."
+    - flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+    - flake8 . --count --exit-zero --max-complexity=10 --max-line-length=88 --show-source --statistics
+    - echo "Running black..."
+    - black --check .
+    - echo "Running isort..."
+    - isort --check-only --profile black .
+    - echo "Running mypy..."
+    - mkdir -p .mypy_cache
+    - mypy --ignore-missing-imports --install-types --non-interactive .
+    - echo "Running codespell..."
+    - codespell .
+
+# ---------- Security ----------
+security:
+  stage: security
+  image: python:3.13
+  before_script:
+    - pip install --upgrade pip
+    - pip install bandit safety
+  script:
+    - echo "Running bandit..."
+    - bandit --recursive --skip B101,B105 .
+    - echo "Running safety..."
+    - pip install -r requirements.txt || pip install --editable . || pip install .
+    - safety check

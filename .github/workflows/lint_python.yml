@@ -1,0 +1,30 @@
+name: Lint & Test
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.13"
+
+      - name: Install tools
+        run: |
+          pip install ruff black mypy pytest
+
+      - name: Run Ruff
+        run: ruff .
+
+      - name: Run Black
+        run: black --check .
+
+      - name: Run MyPy
+        run: mypy app
+
+      - name: Run Pytest
+        run: pytest

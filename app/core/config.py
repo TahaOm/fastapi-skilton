@@ -1,14 +1,19 @@
 import json
-import secrets
 from typing import Any
-from pydantic import PostgresDsn, RedisDsn, field_validator, model_validator
+from pydantic import (
+    PostgresDsn,
+    # RedisDsn,
+    computed_field,
+    field_validator,
+    model_validator,
+)
+from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings
 
 from app.core.constants import Environment
 
 
 class Settings(BaseSettings):
-    # DATABASE_URL: PostgresDsn
     # REDIS_URL: RedisDsn
 
     SITE_DOMAIN: str
@@ -23,9 +28,17 @@ class Settings(BaseSettings):
     CORS_HEADERS: list[str]
 
     APP_VERSION: str
+    APP_NAME: str
 
     # JWT settings
     SECRET_KEY: str
+
+    # Postgresql
+    POSTGRES_USER: str
+    POSTGRES_PASSWORD: str
+    POSTGRES_HOSTNAME: str
+    POSTGRES_PORT: int
+    POSTGRES_DB: str
 
     class Config:
         env_file = ".env"
@@ -53,6 +66,19 @@ class Settings(BaseSettings):
             raise ValueError("Sentry is not set")
 
         return self
+
+    # DATABASE_URL: PostgresDsn
+    @computed_field
+    @property
+    def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
+        return MultiHostUrl.build(
+            scheme="postgresql+psycopg2",
+            username=self.POSTGRES_USER,
+            password=self.POSTGRES_PASSWORD,
+            host=self.POSTGRES_HOSTNAME,
+            port=self.POSTGRES_PORT,
+            path=self.POSTGRES_DB,
+        )
 
 
 # Create an instance of the Settings class
