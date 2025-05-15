@@ -22,8 +22,8 @@ bump_version:
         $GITLAB_USER_LOGIN != "ci-bump-token" # Skip CI-triggered pipelines
   script:
     - pip install bump2version
-    - git config --global user.name "GitLab CI Bump"
-    - git config --global user.email "ci-bump@gitlab.com"
+    - git config --global user.email "${GIT_USER_EMAIL:-$GITLAB_USER_EMAIL}"
+    - git config --global user.name "${GIT_USER_NAME:-$GITLAB_USER_NAME}"
     - git remote set-url origin "https://ci-bump-token:${GITLAB_TOKEN}@gitlab.com/tahaomar001/fastapi-skilton.git"
     - >
       COMMIT_MSG="$(git log -1 --pretty=%B)" &&
@@ -38,6 +38,21 @@ bump_version:
     - git push origin --tags
 
 # ---------- Linting & Security (Run Once per Commit) ----------
+custom_security_checks:
+  stage: security
+  image: python:3.13
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
+  before_script:
+    - pip install --upgrade pip
+    - pip install bandit safety
+  script:
+    - echo "Running bandit..."
+    - bandit --recursive --skip B101,B105 .
+    - pip install --use-feature=fast-deps -r requirements.txt
+    - safety check
+
 lint_python:
   stage: lint
   image: python:3.13
@@ -60,18 +75,3 @@ lint_python:
     - mypy --ignore-missing-imports --install-types --non-interactive .
     - echo "Running codespell..."
     - codespell .
-
-custom_security_checks:
-  stage: security
-  image: python:3.13
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
-  before_script:
-    - pip install --upgrade pip
-    - pip install bandit safety
-  script:
-    - echo "Running bandit..."
-    - bandit --recursive --skip B101,B105 .
-    - pip install --use-feature=fast-deps -r requirements.txt
-    - safety check
